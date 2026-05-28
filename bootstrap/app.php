@@ -11,7 +11,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Visitante não autenticado tentando acessar rota protegida → login
+        $middleware->redirectGuestsTo(fn () => route('login'));
+
+        // Usuário autenticado tentando acessar rota de guest (login/registro) → dashboard
+        $middleware->redirectUsersTo(fn () => route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

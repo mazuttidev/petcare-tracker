@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\Pesagem;
 use App\Models\Pet;
+use App\Models\Pesagem;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 
@@ -11,12 +12,18 @@ class PetSeeder extends Seeder
 {
     public function run(): void
     {
-        // Limpa os dados anteriores para garantir idempotência
+        // Limpeza própria: necessária ao rodar db:seed sem UserSeeder antes
+        // (quando UserSeeder é chamado primeiro no DatabaseSeeder, já limpou tudo)
         Pesagem::query()->delete();
         Pet::withTrashed()->forceDelete();
 
-        // ── Pet 1: Rex — Labrador, macão clássico ─────────────────
-        $rex = Pet::create([
+        $admin = User::where('email', 'admin@petcare.test')->firstOrFail();
+        $maria = User::where('email', 'maria@petcare.test')->firstOrFail();
+
+        // ── Pets do Admin (admin@petcare.test) ─────────────────────
+
+        // Rex: Labrador, macão clássico
+        $rex = $admin->pets()->create([
             'nome'            => 'Rex',
             'especie'         => 'Cão',
             'raca'            => 'Labrador Retriever',
@@ -30,7 +37,6 @@ class PetSeeder extends Seeder
             'status'          => 'Ativo',
         ]);
 
-        // 8 pesagens mensais — leve ganho de peso nos últimos meses
         $this->inserirPesagens($rex, [
             [-7, 30.80, 'Clínica'],
             [-6, 31.00, 'Manual'],
@@ -42,8 +48,8 @@ class PetSeeder extends Seeder
             [ 0, 32.40, 'Manual'],
         ]);
 
-        // ── Pet 2: Mel — Gata SRD, peso oscilou e estabilizou ─────
-        $mel = Pet::create([
+        // Mel: Gata SRD, peso oscilou e estabilizou
+        $mel = $admin->pets()->create([
             'nome'            => 'Mel',
             'especie'         => 'Gato',
             'raca'            => 'SRD',
@@ -57,7 +63,6 @@ class PetSeeder extends Seeder
             'status'          => 'Ativo',
         ]);
 
-        // 7 pesagens — ganhou peso pós-castração, depois estabilizou
         $this->inserirPesagens($mel, [
             [-6, 3.80, 'Clínica'],
             [-5, 4.10, 'Manual'],
@@ -68,8 +73,10 @@ class PetSeeder extends Seeder
             [ 0, 4.60, 'Balança'],
         ]);
 
-        // ── Pet 3: Tobi — Vira-lata, veterano, perdeu peso com dieta
-        $tobi = Pet::create([
+        // ── Pets da Maria (maria@petcare.test) ─────────────────────
+
+        // Tobi: Vira-lata veterano, perdeu peso com dieta
+        $tobi = $maria->pets()->create([
             'nome'            => 'Tobi',
             'especie'         => 'Cão',
             'raca'            => 'Vira-lata',
@@ -83,7 +90,6 @@ class PetSeeder extends Seeder
             'status'          => 'Ativo',
         ]);
 
-        // 6 pesagens — estava acima do peso, colocado em dieta
         $this->inserirPesagens($tobi, [
             [-5, 13.80, 'Clínica'],
             [-4, 13.50, 'Manual'],
@@ -92,11 +98,32 @@ class PetSeeder extends Seeder
             [-1, 12.40, 'Clínica'],
             [ 0, 12.20, 'Balança'],
         ]);
+
+        // Pipoca: Gata Persa jovem, sem histórico de pesagens ainda
+        $pipoca = $maria->pets()->create([
+            'nome'            => 'Pipoca',
+            'especie'         => 'Gato',
+            'raca'            => 'Persa',
+            'data_nascimento' => Carbon::now()->subMonths(8)->toDateString(),
+            'sexo'            => 'Fêmea',
+            'castrado'        => false,
+            'peso_atual'      => 2.80,
+            'cor'             => 'Branco',
+            'microchip'       => null,
+            'observacoes'     => 'Filhote resgatado. Primeira consulta veterinária em 15/06.',
+            'status'          => 'Ativo',
+        ]);
+
+        $this->inserirPesagens($pipoca, [
+            [-2, 2.30, 'Clínica'],
+            [-1, 2.60, 'Manual'],
+            [ 0, 2.80, 'Clínica'],
+        ]);
     }
 
     /**
      * Insere pesagens a partir de um array [meses_atrás, peso_kg, fonte].
-     * meses_atrás = 0 significa hoje; -1 = 1 mês atrás, etc.
+     * meses_atrás = 0 significa hoje; negativo = N meses atrás.
      */
     private function inserirPesagens(Pet $pet, array $entradas): void
     {

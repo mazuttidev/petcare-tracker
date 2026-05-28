@@ -22,7 +22,7 @@
     </x-alert>
 @endif
 
-<form method="POST" action="{{ route('register') }}" novalidate>
+<form id="form-register" method="POST" action="{{ route('register') }}" novalidate>
     @csrf
 
     <div style="display:flex;flex-direction:column;gap:16px">
@@ -134,20 +134,125 @@
 @push('scripts')
 <script>
 (function () {
+    'use strict';
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // VALIDAÇÃO CLIENTE — APENAS EXPERIÊNCIA DO USUÁRIO
+    // A validação real e a segurança estão no servidor (RegisterRequest).
+    // Este script pode ser desativado ou contornado pelo usuário — nunca confie
+    // nele para garantir integridade ou segurança dos dados.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    var ICON_ALERTA =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24"' +
+        ' fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"' +
+        ' stroke-linejoin="round" aria-hidden="true">' +
+        '<circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>';
+
+    var form = document.getElementById('form-register');
+    if (!form) return;
+
+    // Regras espelham RegisterRequest.php — alterações lá devem ser refletidas aqui
+    var REGRAS = {
+        name: function (v) {
+            if (!v.trim()) return 'O nome é obrigatório.';
+            return null;
+        },
+        email: function (v) {
+            if (!v.trim())                                     return 'O e-mail é obrigatório.';
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim())) return 'Informe um e-mail válido.';
+            return null;
+        },
+        password: function (v) {
+            if (!v)           return 'A senha é obrigatória.';
+            if (v.length < 8) return 'A senha deve ter no mínimo 8 caracteres.';
+            return null;
+        },
+        password_confirmation: function (v) {
+            var pwd = form.querySelector('[name="password"]');
+            if (!v)                          return 'Confirme a senha.';
+            if (pwd && v !== pwd.value)      return 'As senhas não coincidem.';
+            return null;
+        },
+    };
+
+    // Insere ou remove a mensagem de erro abaixo do campo
+    function mostrarErro(campo, msg) {
+        var wrapper = campo.closest('.pc-field');
+        if (!wrapper) return;
+        wrapper.querySelectorAll('.pc-field-error--js').forEach(function (el) { el.remove(); });
+        if (msg) {
+            campo.classList.add('pc-input--error');
+            var div = document.createElement('div');
+            div.className = 'pc-field-error pc-field-error--js';
+            div.setAttribute('role', 'alert');
+            div.innerHTML = ICON_ALERTA + '<span>' + msg + '</span>';
+            var help = wrapper.querySelector('.pc-field-help');
+            help ? wrapper.insertBefore(div, help) : wrapper.appendChild(div);
+        } else {
+            campo.classList.remove('pc-input--error');
+        }
+    }
+
+    function validar(campo) {
+        var regra = REGRAS[campo.name];
+        if (!regra) return true;
+        var erro = regra(campo.value);
+        mostrarErro(campo, erro);
+        return erro === null;
+    }
+
+    // Valida ao sair do campo; re-valida em tempo real se já há erro visível
+    Object.keys(REGRAS).forEach(function (nome) {
+        var campo = form.querySelector('[name="' + nome + '"]');
+        if (!campo) return;
+        campo.addEventListener('blur', function () { validar(campo); });
+        campo.addEventListener('input', function () {
+            if (campo.classList.contains('pc-input--error')) validar(campo);
+        });
+    });
+
+    // Quando a senha muda, re-valida a confirmação em tempo real (se já preenchida)
+    var campoPwd     = form.querySelector('[name="password"]');
+    var campoConfirm = form.querySelector('[name="password_confirmation"]');
+    if (campoPwd && campoConfirm) {
+        campoPwd.addEventListener('input', function () {
+            if (campoConfirm.value || campoConfirm.classList.contains('pc-input--error')) {
+                validar(campoConfirm);
+            }
+        });
+    }
+
+    // Bloqueia envio se algum campo for inválido
+    form.addEventListener('submit', function (e) {
+        var ok = true;
+        Object.keys(REGRAS).forEach(function (nome) {
+            var campo = form.querySelector('[name="' + nome + '"]');
+            if (campo && !validar(campo)) ok = false;
+        });
+        if (!ok) {
+            e.preventDefault();
+            var primeiro = form.querySelector('.pc-field-error--js');
+            if (primeiro) primeiro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+
+    // Toggle de visibilidade das senhas
     function initToggle(btnId, inputId) {
         var btn   = document.getElementById(btnId);
         var input = document.getElementById(inputId);
         if (!btn || !input) return;
         btn.addEventListener('click', function () {
-            var isHidden = input.type === 'password';
-            input.type   = isHidden ? 'text' : 'password';
-            btn.querySelector('.icon-show').style.display = isHidden ? 'none' : '';
-            btn.querySelector('.icon-hide').style.display = isHidden ? ''     : 'none';
-            btn.setAttribute('aria-label', isHidden ? 'Ocultar senha' : 'Mostrar senha');
+            var oculto = input.type === 'password';
+            input.type = oculto ? 'text' : 'password';
+            btn.querySelector('.icon-show').style.display = oculto ? 'none' : '';
+            btn.querySelector('.icon-hide').style.display = oculto ? ''     : 'none';
+            btn.setAttribute('aria-label', oculto ? 'Ocultar senha' : 'Mostrar senha');
         });
     }
     initToggle('toggle-pwd',         'password');
     initToggle('toggle-pwd-confirm', 'password_confirmation');
+
 })();
 </script>
 @endpush

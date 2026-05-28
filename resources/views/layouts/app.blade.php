@@ -49,7 +49,7 @@
                     <x-icon name="home" size="18" />
                     Dashboard
                 </a>
-                <a href="#"
+                <a href="{{ route('pets.index') }}"
                    class="pc-nav-item {{ (isset($activeNav) && $activeNav === 'pets') ? 'pc-nav-item--active' : '' }}">
                     <x-icon name="paw" size="18" />
                     Meus pets
@@ -115,7 +115,15 @@
                     {{ Auth::user()->email ?? '' }}
                 </div>
             </div>
-            <x-icon name="chevronDown" size="14" color="var(--pc-n-500)" />
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit"
+                        class="pc-btn pc-btn-ghost pc-btn-icon pc-btn-sm"
+                        aria-label="Sair"
+                        title="Sair">
+                    <x-icon name="logout" size="16" color="var(--pc-n-500)" />
+                </button>
+            </form>
         </div>
 
     </aside>

@@ -8,8 +8,10 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Ordem importa: UserSeeder limpa tudo e cria usuários antes dos pets
         $this->call([
-            PetSeeder::class,
+            UserSeeder::class, // 1. cria os usuários de teste (e limpa dados anteriores)
+            PetSeeder::class,  // 2. cria pets e pesagens vinculados a esses usuários
         ]);
     }
 }

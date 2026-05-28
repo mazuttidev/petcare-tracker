@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -39,6 +40,12 @@ class Pet extends Model
 
     // Valores aceitos pelo campo sexo
     public const SEXOS = ['Macho', 'Fêmea'];
+
+    // Pet pertence a um usuário dono
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     // Um pet pode ter muitas pesagens registradas
     public function pesagens(): HasMany

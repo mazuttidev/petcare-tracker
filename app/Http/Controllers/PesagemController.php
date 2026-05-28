@@ -13,12 +13,17 @@ class PesagemController extends Controller
     // Exibe o formulário de registro de nova pesagem
     public function create(Pet $pet): View
     {
+        // Somente o dono do pet pode gerenciar pesagens
+        $this->authorize('update', $pet);
+
         return view('pesagens.create', compact('pet'));
     }
 
     // Valida via PesagemRequest (inclui regra de variação > 30%) e persiste
     public function store(PesagemRequest $request, Pet $pet): RedirectResponse
     {
+        $this->authorize('update', $pet);
+
         $pet->pesagens()->create($request->validated());
         $this->sincronizarPesoAtual($pet);
 
@@ -30,6 +35,8 @@ class PesagemController extends Controller
     // Exibe o formulário de edição preenchido
     public function edit(Pet $pet, Pesagem $pesagem): View
     {
+        $this->authorize('update', $pet);
+
         // Garante que a pesagem realmente pertence ao pet da rota
         abort_if($pesagem->pet_id !== $pet->id, 404);
 
@@ -39,6 +46,7 @@ class PesagemController extends Controller
     // Valida e salva a pesagem editada
     public function update(PesagemRequest $request, Pet $pet, Pesagem $pesagem): RedirectResponse
     {
+        $this->authorize('update', $pet);
         abort_if($pesagem->pet_id !== $pet->id, 404);
 
         $pesagem->update($request->validated());
@@ -52,6 +60,7 @@ class PesagemController extends Controller
     // Remove permanentemente a pesagem (sem soft delete na entidade Pesagem)
     public function destroy(Pet $pet, Pesagem $pesagem): RedirectResponse
     {
+        $this->authorize('update', $pet);
         abort_if($pesagem->pet_id !== $pet->id, 404);
 
         $pesagem->delete();
